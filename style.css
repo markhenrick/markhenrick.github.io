@@ -36,3 +36,10 @@ a::before {
 a:hover::before {
  transform:translate(-50%, 0) scaleX(1)
 }
+
+@media (prefers-color-schema: dark) {
+  body {
+    background: black;
+    color: white;
+  }
+}
