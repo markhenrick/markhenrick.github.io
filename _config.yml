@@ -28,6 +28,7 @@ github_username: markhenrick
 markdown: kramdown
 theme: minima
 show_excerpts: true
+excerpt_separator: <!--more-->
 plugins:
   - jekyll-feed
 
