@@ -25,15 +25,15 @@ The formal problem described in that article assumes all bins are the same size,
 
 The strategies are known by different names, so here's a terminology table. Remember that lus and mfs are equivalent if all bins are the same size.
 
-| Name on Wikipedia | Name in Unraid | Name in mergerfs |
-| - | - | - |
-| First-Fit? | Fill-up | `ff` (first found) |
-| - | High-water | - |
-| Best-Fit? | - | `lfs` (least free space) |
-| Worst-Fit? | - | `lus` (least used space) |
-| Worst-Fit? | Most-free | `mfs` (most free space) |
-| - | - | `pfrd` (percentage free random distribution) |
-| - | - | `rand` (random) |
+| Name on Wikipedia | Name in Unraid | Name in mergerfs                             |
+| -                 | -              | -                                            |
+| First-Fit?        | Fill-up        | `ff` (first found)                           |
+| -                 | High-water     | -                                            |
+| Best-Fit?         | -              | `lfs` (least free space)                     |
+| Worst-Fit?        | -              | `lus` (least used space)                     |
+| Worst-Fit?        | Most-free      | `mfs` (most free space)                      |
+| -                 | -              | `pfrd` (percentage free random distribution) |
+| -                 | -              | `rand` (random)                              |
 
 I wrote a [little utility](https://github.com/markhenrick/binpackingsim) to simulate the different stategies of Unraid and mergerfs. Its main flaw is that it does not test the path-preservation feature of mergerfs, since it simulates all the files being dropped in the same directory.
 
