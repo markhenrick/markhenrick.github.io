@@ -59,7 +59,7 @@ Almost everyone using SnapRAID will want union mounting (the ability to view all
 
 Another thing that you'll really want to setup is SMART monitoring of your drives with email alerts. Unraid has this out-of-the-box. For custom SnapRAID systems you'll probably want to use smartd and your preferred MTA or other notification dispatcher.
 
-The flexibility of being able to add SnapRAID to an existing system allows me to use one machine as both a NAS and a media centre connected straight to my TV. When I was on Unraid I had to use a separate Raspberry Pi as the media client, which added the complication of networking sharing to Kodi on the Pi. If I had had a spare discrete graphics card I may have been able to pass it through to a media client VM on Unraid, and kept the integrated graphics for the root console, but that is quite a bit of extra time and money to spend.
+The flexibility of being able to add SnapRAID to an existing system allows me to use one machine as both a NAS and a media centre connected straight to my TV. When I was on Unraid I had to use a separate Raspberry Pi as the media client, which added the complication of network sharing to Kodi on the Pi. If I had had a spare discrete graphics card I may have been able to pass it through to a media client VM on Unraid, and kept the integrated graphics for the root console, but that is quite a bit of extra time and money to spend.
 
 # Blocks vs files
 
