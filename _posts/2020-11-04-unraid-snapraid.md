@@ -79,7 +79,7 @@ This does mean that a file deleted from Unraid is deleted immediately, while Sna
 
 Writing to hard drives can be slow, especially since Unraid array writes are limited by the speed of the parity disk. Unraid provides a built in utility to use an SSD as a write cache. Files are initially written to the SSD, and on a schedule (by default, in the early hours of the morning), they are moved to the array proper. Unlike the rest of Unraid, this works at a file, rather than block, level. The SSD is included in the union mount so it's essentially transparent to the user. Since files on the cache are not covered by array parity, there is built in support for using two SSDs in RAID1 using Btrfs.
 
-SnapRAID doesn't have anything like this, but the concept is fairly simple, so it shouldn't be too hard to write your own script using rsync and cron or systemd timers, or just do it by hand. Your writes will also aren't bottlenecked by parity drives in the first place, due to the snapshot model.
+SnapRAID doesn't have anything like this, but the concept is fairly simple, so it shouldn't be too hard to write your own script using rsync and cron or systemd timers, or just do it by hand. Your writes aren't bottlenecked by parity drives in the first place, due to the snapshot model.
 
 # Scrubbing and integrity
 
