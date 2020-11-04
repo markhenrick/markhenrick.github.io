@@ -9,11 +9,11 @@ Recently I've been configuring an old desktop as a NAS/media centre. I settled o
 
 I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable [union mount](https://en.wikipedia.org/wiki/Union_mount) view. This isn't as performant as "real" RAID, but for the scenario of media storage that's usually not an issue, and in fact has the advantage of only spinning one disk at a time.
 
-Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn't matter, but in practice I want to co-locate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs.
+Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn't matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs.
 
 <!--more-->
 
-Each solution offers a different unique feature that can help with this. Unraid has a "maximum split level". For example if your schema is "shareroot/TV/Show Name/Season 1/episode.mkv", then you could set the maximum split to two to colocate entire series, or three to colocate only seasons. Mergerfs includes "most-shared path" variants of most strategies, which will try to put new files in an existing directory on the same drive, then move up a level and try again if they won't fit.
+Each solution offers a different unique feature that can help with this. Unraid has a "maximum split level". For example if your schema is `share root/TV/Show Name/Season 1/episode.mkv`, then you could set the maximum split to two to colocate entire series, or three to colocate only seasons. Mergerfs includes "most-shared path" variants of most strategies, which will try to put new files in an existing directory on the same drive, then move up a level and try again if they won't fit.
 
 In either case, the raw storage devices are exposed too, so you can always manually manage where things are put. Unraid comes with a web interface to show you where files are allocated, and the third-party "Unbalance" plugin makes it easy to relocate them. Mergerfs is a little more manual. I execute [this script](https://gist.github.com/markhenrick/cfc9ba9ed78344ab58cdff88381bfdc2) that I wrote in the root of the TV shows directory, and then manually use Midnight Commander to move things. I'm planning to work on a more automated solution.
 
@@ -35,7 +35,7 @@ The strategies are known by different names, so here's a terminology table. Reme
 | -                 | -              | `pfrd` (percentage free random distribution) |
 | -                 | -              | `rand` (random)                              |
 
-I wrote a [little utility](https://github.com/markhenrick/binpackingsim) to simulate the different stategies of Unraid and mergerfs. Its main flaw is that it does not test the path-preservation feature of mergerfs, since it simulates all the files being dropped in the same directory.
+I wrote a [little utility](https://github.com/markhenrick/binpackingsim) to simulate the different strategies of Unraid and mergerfs. Its main flaw is that it does not test the path-preservation feature of mergerfs, since it simulates all the files being dropped in the same directory.
 
 I tested it using the scenario of storing 4GB files into drives with sizes (1, 4, 4, 2)TB, until they're full. The key thing I was looking for in these plots is the separation of the lines. In many strategies the orange and green, and red and blue, lines follow almost the same trajectory, meaning that files are being alternatively assigned between the two during some periods, which would manifest as a fragmented TV show.
 
