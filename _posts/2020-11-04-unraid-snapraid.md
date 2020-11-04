@@ -24,7 +24,7 @@ See the sections beneath the table for discussion of these points.
 | Web GUI built-in | Try OpenMediaVault |
 | Task scheduling built-in | No task scheduling, and remember that syncs and checks have to be run manually. Community systemd units exist |
 | Easy UI for VMs and Docker | Too many alternatives to list. Maybe Proxmox? |
-| Opinionated with big community, good for beginners or people who want to "set it and forget it" | Go your own way, good for people who want more control or to integrate it with an existing server setup |
+| Opinionated with a big community, good for beginners or people who want to "set it and forget it" | Go your own way, good for people who want more control or to integrate it with an existing server setup |
 | **Works on blocks** | **Works on files** |
 | Have to clear disks before adding | Can start with populated disks |
 | Supports XFS or Btrfs (+ LUKS) | Supports virtually any mountpoint, even Windows hosts |
