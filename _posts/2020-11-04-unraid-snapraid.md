@@ -11,7 +11,7 @@ Following on from my [previous post]({% post_url 2020-11-03-binpacking %}), I've
 
 # TL;DR
 
-See the sections beneath the table for discussion of these points.
+See the sections beneath the table for discussion of these points. Summary at the bottom of the article.
 
 | Unraid | SnapRAID |
 | -      | -        |
