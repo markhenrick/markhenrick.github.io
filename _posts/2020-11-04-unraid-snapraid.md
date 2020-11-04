@@ -61,6 +61,8 @@ Another thing that you'll really want to setup is SMART monitoring of your drive
 
 The flexibility of being able to add SnapRAID to an existing system allows me to use one machine as both a NAS and a media centre connected straight to my TV. When I was on Unraid I had to use a separate Raspberry Pi as the media client, which added the complication of network sharing to Kodi on the Pi. If I had had a spare discrete graphics card I may have been able to pass it through to a media client VM on Unraid, and kept the integrated graphics for the root console, but that is quite a bit of extra time and money to spend.
 
+[TL;DR](/assets/2020-11-04-unraid-snapraid/dank_meem.jpg)
+
 # Blocks vs files
 
 Another key difference is that Unraid works on block devices while SnapRAID works on files. IMO SnapRAID is the clear winner here.
