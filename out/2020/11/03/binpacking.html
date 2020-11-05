@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Bin packing strategies for union mounts | Mark Henrick</title>
+<meta name="generator" content="Jekyll v4.1.1" />
+<meta property="og:title" content="Bin packing strategies for union mounts" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Recently I’ve been configuring an old desktop as a NAS/media centre. I settled on using a “JBOD plus redundancy” system like Unraid or SnapRAID+mergerfs for the flexibility that it provides, as opposed to something more enterprise like FreeNAS/ZFS or a traditional RAID setup. I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable union mount view. This isn’t as performant as “real” RAID, but for the scenario of media storage that’s usually not an issue, and in fact has the advantage of only spinning one disk at a time. Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn’t matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs." />
+<meta property="og:description" content="Recently I’ve been configuring an old desktop as a NAS/media centre. I settled on using a “JBOD plus redundancy” system like Unraid or SnapRAID+mergerfs for the flexibility that it provides, as opposed to something more enterprise like FreeNAS/ZFS or a traditional RAID setup. I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable union mount view. This isn’t as performant as “real” RAID, but for the scenario of media storage that’s usually not an issue, and in fact has the advantage of only spinning one disk at a time. Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn’t matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs." />
+<link rel="canonical" href="https://markhenrick.site/2020/11/03/binpacking.html" />
+<meta property="og:url" content="https://markhenrick.site/2020/11/03/binpacking.html" />
+<meta property="og:site_name" content="Mark Henrick" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-11-03T20:34:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Bin packing strategies for union mounts" />
+<script type="application/ld+json">
+{"description":"Recently I’ve been configuring an old desktop as a NAS/media centre. I settled on using a “JBOD plus redundancy” system like Unraid or SnapRAID+mergerfs for the flexibility that it provides, as opposed to something more enterprise like FreeNAS/ZFS or a traditional RAID setup. I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable union mount view. This isn’t as performant as “real” RAID, but for the scenario of media storage that’s usually not an issue, and in fact has the advantage of only spinning one disk at a time. Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn’t matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs.","url":"https://markhenrick.site/2020/11/03/binpacking.html","@type":"BlogPosting","headline":"Bin packing strategies for union mounts","dateModified":"2020-11-03T20:34:00+00:00","datePublished":"2020-11-03T20:34:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://markhenrick.site/2020/11/03/binpacking.html"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://markhenrick.site/feed.xml" title="Mark Henrick" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Mark Henrick</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Bin packing strategies for union mounts</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-11-03T20:34:00+00:00" itemprop="datePublished">Nov 3, 2020
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Recently I’ve been configuring an old desktop as a NAS/media centre. I settled on using a “JBOD plus redundancy” system like Unraid or SnapRAID+mergerfs for the flexibility that it provides, as opposed to something more enterprise like FreeNAS/ZFS or a traditional RAID setup.</p>
+
+<p>I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable <a href="https://en.wikipedia.org/wiki/Union_mount">union mount</a> view. This isn’t as performant as “real” RAID, but for the scenario of media storage that’s usually not an issue, and in fact has the advantage of only spinning one disk at a time.</p>
+
+<p>Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn’t matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs.</p>
+
+<!--more-->
+
+<p>Each solution offers a different unique feature that can help with this. Unraid has a “maximum split level”. For example if your schema is <code class="language-plaintext highlighter-rouge">share root/TV/Show Name/Season 1/episode.mkv</code>, then you could set the maximum split to two to colocate entire series, or three to colocate only seasons. Mergerfs includes “most-shared path” variants of most strategies, which will try to put new files in an existing directory on the same drive, then move up a level and try again if they won’t fit.</p>
+
+<p>In either case, the raw storage devices are exposed too, so you can always manually manage where things are put. Unraid comes with a web interface to show you where files are allocated, and the third-party “Unbalance” plugin makes it easy to relocate them. Mergerfs is a little more manual. I execute <a href="https://gist.github.com/markhenrick/cfc9ba9ed78344ab58cdff88381bfdc2">this script</a> that I wrote in the root of the TV shows directory, and then manually use Midnight Commander to move things. I’m planning to work on a more automated solution.</p>
+
+<h1 id="bin-packing">Bin packing</h1>
+
+<p>The problem of selecting a bin (drive) to put an item (file) in is known as the <a href="https://en.wikipedia.org/wiki/Bin_packing">bin-packing problem</a>; specifically, the offline variant, meaning we don’t have foresight of the files that will come in the future and we’d rather not move them once allocated.</p>
+
+<p>The formal problem described in that article assumes all bins are the same size, which is not the case with my setup. It also considers items of radically different sizes and tries to optimise for the maximum total storage. This is not something I’m concerned with, since the drive are usually so much bigger than the files, and you’re ideally leaving them at &lt;90% usage, so efficiency differences should be negligible.</p>
+
+<p>The strategies are known by different names, so here’s a terminology table. Remember that lus and mfs are equivalent if all bins are the same size.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name on Wikipedia</th>
+      <th>Name in Unraid</th>
+      <th>Name in mergerfs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>First-Fit?</td>
+      <td>Fill-up</td>
+      <td><code class="language-plaintext highlighter-rouge">ff</code> (first found)</td>
+    </tr>
+    <tr>
+      <td>-</td>
+      <td>High-water</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>Best-Fit?</td>
+      <td>-</td>
+      <td><code class="language-plaintext highlighter-rouge">lfs</code> (least free space)</td>
+    </tr>
+    <tr>
+      <td>Worst-Fit?</td>
+      <td>-</td>
+      <td><code class="language-plaintext highlighter-rouge">lus</code> (least used space)</td>
+    </tr>
+    <tr>
+      <td>Worst-Fit?</td>
+      <td>Most-free</td>
+      <td><code class="language-plaintext highlighter-rouge">mfs</code> (most free space)</td>
+    </tr>
+    <tr>
+      <td>-</td>
+      <td>-</td>
+      <td><code class="language-plaintext highlighter-rouge">pfrd</code> (percentage free random distribution)</td>
+    </tr>
+    <tr>
+      <td>-</td>
+      <td>-</td>
+      <td><code class="language-plaintext highlighter-rouge">rand</code> (random)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>I wrote a <a href="https://github.com/markhenrick/binpackingsim">little utility</a> to simulate the different strategies of Unraid and mergerfs. Its main flaw is that it does not test the path-preservation feature of mergerfs, since it simulates all the files being dropped in the same directory.</p>
+
+<p>I tested it using the scenario of storing 4GB files into drives with sizes (1, 4, 4, 2)TB, until they’re full. The key thing I was looking for in these plots is the separation of the lines. In many strategies the orange and green, and red and blue, lines follow almost the same trajectory, meaning that files are being alternatively assigned between the two during some periods, which would manifest as a fragmented TV show.</p>
+
+<p><a href="https://www.youtube.com/watch?v=NOmzX3bFpZ8">Now then</a></p>
+
+<h2 id="first">First</h2>
+
+<p><img src="/assets/2020-11-03-binpacking/first.png" alt="First strategy plot" /></p>
+
+<p>The simplest strategy, and does a decent job, as long as you don’t mind your drives being used somewhat disproportionally.</p>
+
+<h2 id="least-free-space">Least-free space</h2>
+
+<p><img src="/assets/2020-11-03-binpacking/lfs.png" alt="LFS strategy plot" /></p>
+
+<p>This is what I’m currently using on my setup.</p>
+
+<h2 id="least-used-space">Least-used space</h2>
+
+<p><img src="/assets/2020-11-03-binpacking/lus.png" alt="LUS strategy plot" /></p>
+
+<p>This makes good proportionate use of the drives, but has poor separation of drives 1 and 2.</p>
+
+<h2 id="most-free-space">Most-free space</h2>
+
+<p><img src="/assets/2020-11-03-binpacking/mfs.png" alt="MFS strategy plot" /></p>
+
+<p>Good proportionate use, but pretty much the worst strategy for colocation.</p>
+
+<h2 id="high-water">High-water</h2>
+
+<p>This is an Unraid-specific strategy. Quoting from the UI</p>
+
+<blockquote>
+  <p>High-water Choose the lowest numbered disk with free space still above the current high water mark. The high water mark is initialized with the size of the largest data disk divided by 2. If no disk has free space above the current high water mark, divide the high water mark by 2 and choose again.</p>
+
+  <p>The goal of High-water is to write as much data as possible to each disk (in order to minimize how often disks need to be spun up), while at the same time, try to keep the same amount of free space on each disk (in order to distribute data evenly across the array).</p>
+</blockquote>
+
+<p><img src="/assets/2020-11-03-binpacking/high_water.png" alt="High-water strategy plot" /></p>
+
+<p>This appears to fulfill its stated goal, making approximately equal use of drives <em>and</em> having good separation of lines. I’d probably use this if I were on Unraid.</p>
+
+<h2 id="random">Random</h2>
+
+<p><img src="/assets/2020-11-03-binpacking/random.png" alt="Random strategy plot" /></p>
+
+<p>Basically a non-deterministic version of LUS.</p>
+
+<h2 id="percentage-free-random-distribution">Percentage-Free Random Distribution</h2>
+
+<p><img src="/assets/2020-11-03-binpacking/pfrd.png" alt="pfrd strategy plot" /></p>
+
+<p>An interesting strategy, but not good for my use case.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>So in short, I would recommend</p>
+
+<ul>
+  <li>If you’re on Unraid just use high-water tbh. I think it’s the default too</li>
+  <li>If you want colocation, first off make use of the features like maximum split or path preservation that I described earlier, then use LFS or first</li>
+  <li>If you want equal usage of drives, use LUS</li>
+</ul>
+
+  </div><a class="u-url" href="/2020/11/03/binpacking.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Mark Henrick</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Mark Henrick</li><li><a class="u-email" href="mailto:mark@$CURRENT_DOMAIN">mark@$CURRENT_DOMAIN</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/markhenrick"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">markhenrick</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p></p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Unraid vs Snapraid | Mark Henrick</title>
+<meta name="generator" content="Jekyll v4.1.1" />
+<meta property="og:title" content="Unraid vs Snapraid" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup." />
+<meta property="og:description" content="Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup." />
+<link rel="canonical" href="https://markhenrick.site/2020/11/04/unraid-snapraid.html" />
+<meta property="og:url" content="https://markhenrick.site/2020/11/04/unraid-snapraid.html" />
+<meta property="og:site_name" content="Mark Henrick" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-11-04T18:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Unraid vs Snapraid" />
+<script type="application/ld+json">
+{"description":"Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup.","url":"https://markhenrick.site/2020/11/04/unraid-snapraid.html","@type":"BlogPosting","headline":"Unraid vs Snapraid","dateModified":"2020-11-04T18:00:00+00:00","datePublished":"2020-11-04T18:00:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://markhenrick.site/2020/11/04/unraid-snapraid.html"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://markhenrick.site/feed.xml" title="Mark Henrick" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Mark Henrick</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Unraid vs Snapraid</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-11-04T18:00:00+00:00" itemprop="datePublished">Nov 4, 2020
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Following on from my <a href="/2020/11/03/binpacking.html">previous post</a>, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup.</p>
+
+<!--more-->
+
+<h1 id="tldr">TL;DR</h1>
+
+<p>See the sections beneath the table for discussion of these points. Summary at the bottom of the article.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Unraid</th>
+      <th>SnapRAID</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Closed source, but decently priced and OS is very transparent. Your data is <em>not</em> locked in</strong></td>
+      <td><strong>Open source</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Complete package</strong></td>
+      <td><strong>Just redundancy</strong></td>
+    </tr>
+    <tr>
+      <td>Union mounting built-in</td>
+      <td>Basic read-only symlink-snapshot union view. Try mergerfs</td>
+    </tr>
+    <tr>
+      <td>Sharing built-in</td>
+      <td>Manually set-up SMB or NFS or whatever</td>
+    </tr>
+    <tr>
+      <td>SMART monitoring built-in</td>
+      <td>Use smartd</td>
+    </tr>
+    <tr>
+      <td>Email and webhook notifications built-in</td>
+      <td>Manual setup</td>
+    </tr>
+    <tr>
+      <td>Web GUI built-in</td>
+      <td>Try OpenMediaVault</td>
+    </tr>
+    <tr>
+      <td>Task scheduling built-in</td>
+      <td>No task scheduling, and remember that syncs and checks have to be run manually. Community systemd units exist</td>
+    </tr>
+    <tr>
+      <td>Easy UI for VMs and Docker</td>
+      <td>Too many alternatives to list. Maybe Proxmox?</td>
+    </tr>
+    <tr>
+      <td>Opinionated with a big community, good for beginners or people who want to “set it and forget it”</td>
+      <td>Go your own way, good for people who want more control or to integrate it with an existing server setup</td>
+    </tr>
+    <tr>
+      <td><strong>Works on blocks</strong></td>
+      <td><strong>Works on files</strong></td>
+    </tr>
+    <tr>
+      <td>Have to clear disks before adding</td>
+      <td>Can start with populated disks</td>
+    </tr>
+    <tr>
+      <td>Supports XFS or Btrfs (+ LUKS)</td>
+      <td>Supports virtually any mountpoint, even Windows hosts</td>
+    </tr>
+    <tr>
+      <td>Parity sync duration proportional to raw block size</td>
+      <td>Parity sync duration proportional to actual usage. Partial checks supported OOTB</td>
+    </tr>
+    <tr>
+      <td>Consumes entire block device for parity</td>
+      <td>Parity stored as plain files</td>
+    </tr>
+    <tr>
+      <td><strong>Live parity</strong></td>
+      <td><strong>Snapshot parity</strong></td>
+    </tr>
+    <tr>
+      <td>Data is protected immediately</td>
+      <td>Unsynced data is unprotected. Deleted or changed data can remove protection from files on other drives until the next sync. Cannot sync whilst writing</td>
+    </tr>
+    <tr>
+      <td>Automatically simulates failed disks from parity</td>
+      <td>Must mount a replacement disk and wait for lost files to be recovered one-by-one</td>
+    </tr>
+    <tr>
+      <td>Write speed bottlenecked by parity disks (without mover)</td>
+      <td>Parity sync can be run during quiet hours</td>
+    </tr>
+    <tr>
+      <td>No protection against accidental deletion</td>
+      <td>Snapshot parity gives you a grace period to recover from stupid mistakes</td>
+    </tr>
+    <tr>
+      <td>Not a substitute for a proper offsite backup</td>
+      <td>Also not a substitute for a proper offsite backup</td>
+    </tr>
+    <tr>
+      <td><strong>“Mover” built-in</strong></td>
+      <td><strong>rsync + cron?</strong></td>
+    </tr>
+    <tr>
+      <td><strong>No built-in integrity checks</strong> (community plugins available)</td>
+      <td><strong>Checksums all files</strong></td>
+    </tr>
+    <tr>
+      <td>Has (small) potential to silently restore corrupted data</td>
+      <td>Verifies all restored data with checksums</td>
+    </tr>
+    <tr>
+      <td>Power loss during write can leave array in ambiguous state</td>
+      <td>Syncs are transactional</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1 id="licensing">Licensing</h1>
+
+<p>Let’s start with the elephant in the room. SnapRAID is an open source project while Unraid costs between $60 and $130 depending on how many drives you use. Unless you have ethical objections to proprietary software I don’t think this is a big difference. The Unraid licenses are fairly cheap when you consider how much hardware costs, and they’re lifetime licenses too.</p>
+
+<p>Some people are concerned that Unraid locks in your data - this isn’t true; I moved from Unraid to SnapRAID with just a parity sync. Your data drives are plain XFS or Btrfs, perhaps with LUKS. The parity drive format is undocumented afaik, but I’m sure someone’s reverse engineered it. Presumably the first parity drive is plain xor.</p>
+
+<p>The Unraid system is just Slackware and you can easily SSH in and do whatever you want to it. The Unraid developers interact a lot with the community and often promote community plugins and tutorials, so they’re very open to hacking and experimenting on the OS.</p>
+
+<p>The main disadvantage of Unraid is that it’s “all-or-nothing”, as discussed in the next section. I’m not sure how comfortable Unraid is running in a VM, or if you always need to dedicate a physical host.</p>
+
+<h1 id="complete-package-vs-just-redundancy">Complete package vs just redundancy</h1>
+
+<p>The first difference to understand is that “Unraid” refers to a whole operating system that provides redundancy, union mounting, networked file access, monitoring, scheduling, notifications, VM and Docker management, and a web GUI to configure it all. On the other hand SnapRAID is <em>just</em> a utility for adding redundancy to a set of existing mountpoints, and everything else must be provided elsewhere. I have heard that OpenMediaVault provides an Unraid-like experience for SnapRAID and mergerfs. I haven’t tried it myself yet, but will try to do a write-up if I do.</p>
+
+<p>Almost everyone using SnapRAID will want union mounting (the ability to view all the disks as one pool). SnapRAID comes with built-in support for a read-only union view, in the form of a command which will populate a pool directory with symlinks to the actual files. Most users will want to replace this with something more powerful that can offer live updates and write support. The most popular solution is mergerfs, though I think Windows users often go with Stablebit Drivepool. I wrote <a href="/2020/11/03/binpacking.html">a post comparing the write strategies of mergerfs and Unraid</a>, but the executive summary is that union mounting is a fairly solved problem and both Unraid and mergerfs do it well. Mergerfs is more powerful, but assumes more expertise from users.</p>
+
+<p>Another thing that you’ll really want to setup is SMART monitoring of your drives with email alerts. Unraid has this out-of-the-box. For custom SnapRAID systems you’ll probably want to use smartd and your preferred MTA or other notification dispatcher.</p>
+
+<p>The flexibility of being able to add SnapRAID to an existing system allows me to use one machine as both a NAS and a media centre connected straight to my TV. When I was on Unraid I had to use a separate Raspberry Pi as the media client, which added the complication of network sharing to Kodi on the Pi. If I had had a spare discrete graphics card I may have been able to pass it through to a media client VM on Unraid, and kept the integrated graphics for the root console, but that is quite a bit of extra time and money to spend.</p>
+
+<p><a href="/assets/2020-11-04-unraid-snapraid/dank_meem.jpg">TL;DR</a></p>
+
+<h1 id="blocks-vs-files">Blocks vs files</h1>
+
+<p>Another key difference is that Unraid works on block devices while SnapRAID works on files. IMO SnapRAID is the clear winner here.</p>
+
+<p>Unraid is more like mdadm, where you take some raw block devices, create virtual RAID devices, and then work on top of those. The Unraid OS only supports XFS or Btrfs with optional LUKS, but in theory I expect the storage virtualisation layer could support any FS. This also means that adding a new disk requires a parity sync; the way this is usually done is by “pre-clearing” the new disk to all zeroes, since <code class="language-plaintext highlighter-rouge">a xor 0 = a</code>, meaning that the existing disks do not need updating. Unfortunately this means you can’t officially add a full disk to Unraid, though I expect it should be theoretically possible if you do a full parity sync afterwards. The other disadvantage of this is that a parity sync or check time is proportional to the size of your largest data drive, regardless of how much actual space is used.</p>
+
+<p>SnapRAID OTOH does not really care about filesystems or block devices; it just works on directories, and is so relaxed about semantics that it even runs fine on Windows. You can start off with full drives, as I did when I moved from Unraid to SnapRAID. Even the parity itself is just plain files rather than requiring a raw block device, as Unraid does, and will be proportional to actual usage, meaning you can take a risk and temporarily overcommit a parity drive smaller than a data drive, as long as you don’t use more storage on a single drive than the parity drive can hold.</p>
+
+<h1 id="live-vs-snapshot-parity">Live vs snapshot parity</h1>
+
+<p>The main difference between Unraid’s storage system and SnapRAID is that Unraid runs as a daemon, constantly maintaining the virtual devices discussed previously, while SnapRAID is actually just a set of terminating commands that you run manually or on a schedule. You add/delete/update files and run <code class="language-plaintext highlighter-rouge">snapraid sync</code>. If a disk fails, you install, format, and mount a new one, then tell SnapRAID to start restoring the files onto it. You won’t have access to all your files until this finishes. This also means your new files are unprotected until you run a sync, and if you delete files from one drive, you remove protection from <em>some</em> files on other drives until you sync again, though the integrity features described later mean it should never result in silent corruption of restored files.</p>
+
+<p>Unraid is more like a traditional RAID setup. Parity is written before returning “success” to the writing program. Normal reads on a healthy array only use one data disk, but when a disk fails the system will immediately start using the other disks to emulate it from parity, allowing you to continue using the whole array without interruption. Ironically this means that <em>Un</em>raid is more “real” RAID than Snap<em>RAID</em> IMO, since I consider high-availability to be the main purpose of RAID.</p>
+
+<p>This does mean that a file deleted from Unraid is deleted immediately, while SnapRAID allows you until the next sync to notice your mistake and restore it, however this should be considered a little bonus rather than something to rely on. If you really need that, use a filesystem with proper snapshots like ZFS, and remember that snapshots and disk redundancy are still not a substitute for offsite backup.</p>
+
+<h1 id="the-mover">The mover</h1>
+
+<p>Writing to hard drives can be slow, especially since Unraid array writes are limited by the speed of the parity disk. Unraid provides a built in utility to use an SSD as a write cache. Files are initially written to the SSD, and on a schedule (by default, in the early hours of the morning), they are moved to the array proper. Unlike the rest of Unraid, this works at a file, rather than block, level. The SSD is included in the union mount so it’s essentially transparent to the user. Since files on the cache are not covered by array parity, there is built in support for using two SSDs in RAID1 using Btrfs.</p>
+
+<p>SnapRAID doesn’t have anything like this, but the concept is fairly simple, so it shouldn’t be too hard to write your own script using rsync and cron or systemd timers, or just do it by hand. Your writes aren’t bottlenecked by parity drives in the first place, due to the snapshot model.</p>
+
+<h1 id="scrubbing-and-integrity">Scrubbing and integrity</h1>
+
+<p>Both systems can perform scrubs/parity checks, however Unraid is more limited.</p>
+
+<p>On a base install, Unraid parity checks are all-or-nothing, while SnapRAID defaults to scanning 8% of the files with the oldest scrub date, meaning that every file is checked every three months if you run the command weekly. As discussed before, Unraid has to scan the whole block device while SnapRAID just scans actual files.</p>
+
+<p>Unraid suffers from the same problem as traditional RAID setups: if the calculated parity does not match the stored parity, is it the data or the parity which is wrong? SnapRAID is more similar to ZFS in that it stores actual file checksums, so can always answer correctly (beyond reasonable doubt). Presumably using dual parity on Unraid should help here.</p>
+
+<p>Silent data corruption on hard disks is often considered to be virtually a myth, since it would be very unlikely to happen in such a way that the hard disk’s own error correction doesn’t detect it and return a media error, however it’s not the only way that the parity can become desynced. I believe Unraid is vulnerable to a “write hole” if power is lost during a write, whereas SnapRAID performs its syncs in a transactional manner, so can safely resume them.</p>
+
+<p>As a bonus, SnapRAID also provides a <code class="language-plaintext highlighter-rouge">dup</code> command to list duplicate files, and also supports hard links, so it may be possible to leverage these for some limited deduplication support.</p>
+
+<h1 id="summary">Summary</h1>
+
+<p>Both are great solutions. Unraid is more opinionated while SnapRAID is more flexible. There are tools to simplify SnapRAID setup, giving it an Unraid-like UX, but the reverse - using Unraid as a facet of an existing Linux install - is not possible. SnapRAID’s unique advantage is the file-based model, while Unraid’s is the fact that it provides high availability like a traditional RAID system. The checksumming built into SnapRAID is nice, but there are Unraid plugins that do similar things.</p>
+
+  </div><a class="u-url" href="/2020/11/04/unraid-snapraid.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Mark Henrick</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Mark Henrick</li><li><a class="u-email" href="mailto:mark@$CURRENT_DOMAIN">mark@$CURRENT_DOMAIN</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/markhenrick"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">markhenrick</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p></p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

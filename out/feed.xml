@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="https://markhenrick.site/feed.xml" rel="self" type="application/atom+xml" /><link href="https://markhenrick.site/" rel="alternate" type="text/html" /><updated>2020-11-05T17:27:15+00:00</updated><id>https://markhenrick.site/feed.xml</id><title type="html">Mark Henrick</title><entry><title type="html">Unraid vs Snapraid</title><link href="https://markhenrick.site/2020/11/04/unraid-snapraid.html" rel="alternate" type="text/html" title="Unraid vs Snapraid" /><published>2020-11-04T18:00:00+00:00</published><updated>2020-11-04T18:00:00+00:00</updated><id>https://markhenrick.site/2020/11/04/unraid-snapraid</id><content type="html" xml:base="https://markhenrick.site/2020/11/04/unraid-snapraid.html">&lt;p&gt;Following on from my &lt;a href=&quot;/2020/11/03/binpacking.html&quot;&gt;previous post&lt;/a&gt;, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup.&lt;/p&gt;
+
+&lt;!--more--&gt;
+
+&lt;h1 id=&quot;tldr&quot;&gt;TL;DR&lt;/h1&gt;
+
+&lt;p&gt;See the sections beneath the table for discussion of these points. Summary at the bottom of the article.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Unraid&lt;/th&gt;
+      &lt;th&gt;SnapRAID&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;Closed source, but decently priced and OS is very transparent. Your data is &lt;em&gt;not&lt;/em&gt; locked in&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;strong&gt;Open source&lt;/strong&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;Complete package&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;strong&gt;Just redundancy&lt;/strong&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Union mounting built-in&lt;/td&gt;
+      &lt;td&gt;Basic read-only symlink-snapshot union view. Try mergerfs&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Sharing built-in&lt;/td&gt;
+      &lt;td&gt;Manually set-up SMB or NFS or whatever&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;SMART monitoring built-in&lt;/td&gt;
+      &lt;td&gt;Use smartd&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Email and webhook notifications built-in&lt;/td&gt;
+      &lt;td&gt;Manual setup&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Web GUI built-in&lt;/td&gt;
+      &lt;td&gt;Try OpenMediaVault&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Task scheduling built-in&lt;/td&gt;
+      &lt;td&gt;No task scheduling, and remember that syncs and checks have to be run manually. Community systemd units exist&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Easy UI for VMs and Docker&lt;/td&gt;
+      &lt;td&gt;Too many alternatives to list. Maybe Proxmox?&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Opinionated with a big community, good for beginners or people who want to “set it and forget it”&lt;/td&gt;
+      &lt;td&gt;Go your own way, good for people who want more control or to integrate it with an existing server setup&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;Works on blocks&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;strong&gt;Works on files&lt;/strong&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Have to clear disks before adding&lt;/td&gt;
+      &lt;td&gt;Can start with populated disks&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Supports XFS or Btrfs (+ LUKS)&lt;/td&gt;
+      &lt;td&gt;Supports virtually any mountpoint, even Windows hosts&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Parity sync duration proportional to raw block size&lt;/td&gt;
+      &lt;td&gt;Parity sync duration proportional to actual usage. Partial checks supported OOTB&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Consumes entire block device for parity&lt;/td&gt;
+      &lt;td&gt;Parity stored as plain files&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;Live parity&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;strong&gt;Snapshot parity&lt;/strong&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Data is protected immediately&lt;/td&gt;
+      &lt;td&gt;Unsynced data is unprotected. Deleted or changed data can remove protection from files on other drives until the next sync. Cannot sync whilst writing&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Automatically simulates failed disks from parity&lt;/td&gt;
+      &lt;td&gt;Must mount a replacement disk and wait for lost files to be recovered one-by-one&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Write speed bottlenecked by parity disks (without mover)&lt;/td&gt;
+      &lt;td&gt;Parity sync can be run during quiet hours&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;No protection against accidental deletion&lt;/td&gt;
+      &lt;td&gt;Snapshot parity gives you a grace period to recover from stupid mistakes&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Not a substitute for a proper offsite backup&lt;/td&gt;
+      &lt;td&gt;Also not a substitute for a proper offsite backup&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;“Mover” built-in&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;strong&gt;rsync + cron?&lt;/strong&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;No built-in integrity checks&lt;/strong&gt; (community plugins available)&lt;/td&gt;
+      &lt;td&gt;&lt;strong&gt;Checksums all files&lt;/strong&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Has (small) potential to silently restore corrupted data&lt;/td&gt;
+      &lt;td&gt;Verifies all restored data with checksums&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Power loss during write can leave array in ambiguous state&lt;/td&gt;
+      &lt;td&gt;Syncs are transactional&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h1 id=&quot;licensing&quot;&gt;Licensing&lt;/h1&gt;
+
+&lt;p&gt;Let’s start with the elephant in the room. SnapRAID is an open source project while Unraid costs between $60 and $130 depending on how many drives you use. Unless you have ethical objections to proprietary software I don’t think this is a big difference. The Unraid licenses are fairly cheap when you consider how much hardware costs, and they’re lifetime licenses too.&lt;/p&gt;
+
+&lt;p&gt;Some people are concerned that Unraid locks in your data - this isn’t true; I moved from Unraid to SnapRAID with just a parity sync. Your data drives are plain XFS or Btrfs, perhaps with LUKS. The parity drive format is undocumented afaik, but I’m sure someone’s reverse engineered it. Presumably the first parity drive is plain xor.&lt;/p&gt;
+
+&lt;p&gt;The Unraid system is just Slackware and you can easily SSH in and do whatever you want to it. The Unraid developers interact a lot with the community and often promote community plugins and tutorials, so they’re very open to hacking and experimenting on the OS.&lt;/p&gt;
+
+&lt;p&gt;The main disadvantage of Unraid is that it’s “all-or-nothing”, as discussed in the next section. I’m not sure how comfortable Unraid is running in a VM, or if you always need to dedicate a physical host.&lt;/p&gt;
+
+&lt;h1 id=&quot;complete-package-vs-just-redundancy&quot;&gt;Complete package vs just redundancy&lt;/h1&gt;
+
+&lt;p&gt;The first difference to understand is that “Unraid” refers to a whole operating system that provides redundancy, union mounting, networked file access, monitoring, scheduling, notifications, VM and Docker management, and a web GUI to configure it all. On the other hand SnapRAID is &lt;em&gt;just&lt;/em&gt; a utility for adding redundancy to a set of existing mountpoints, and everything else must be provided elsewhere. I have heard that OpenMediaVault provides an Unraid-like experience for SnapRAID and mergerfs. I haven’t tried it myself yet, but will try to do a write-up if I do.&lt;/p&gt;
+
+&lt;p&gt;Almost everyone using SnapRAID will want union mounting (the ability to view all the disks as one pool). SnapRAID comes with built-in support for a read-only union view, in the form of a command which will populate a pool directory with symlinks to the actual files. Most users will want to replace this with something more powerful that can offer live updates and write support. The most popular solution is mergerfs, though I think Windows users often go with Stablebit Drivepool. I wrote &lt;a href=&quot;/2020/11/03/binpacking.html&quot;&gt;a post comparing the write strategies of mergerfs and Unraid&lt;/a&gt;, but the executive summary is that union mounting is a fairly solved problem and both Unraid and mergerfs do it well. Mergerfs is more powerful, but assumes more expertise from users.&lt;/p&gt;
+
+&lt;p&gt;Another thing that you’ll really want to setup is SMART monitoring of your drives with email alerts. Unraid has this out-of-the-box. For custom SnapRAID systems you’ll probably want to use smartd and your preferred MTA or other notification dispatcher.&lt;/p&gt;
+
+&lt;p&gt;The flexibility of being able to add SnapRAID to an existing system allows me to use one machine as both a NAS and a media centre connected straight to my TV. When I was on Unraid I had to use a separate Raspberry Pi as the media client, which added the complication of network sharing to Kodi on the Pi. If I had had a spare discrete graphics card I may have been able to pass it through to a media client VM on Unraid, and kept the integrated graphics for the root console, but that is quite a bit of extra time and money to spend.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;/assets/2020-11-04-unraid-snapraid/dank_meem.jpg&quot;&gt;TL;DR&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;blocks-vs-files&quot;&gt;Blocks vs files&lt;/h1&gt;
+
+&lt;p&gt;Another key difference is that Unraid works on block devices while SnapRAID works on files. IMO SnapRAID is the clear winner here.&lt;/p&gt;
+
+&lt;p&gt;Unraid is more like mdadm, where you take some raw block devices, create virtual RAID devices, and then work on top of those. The Unraid OS only supports XFS or Btrfs with optional LUKS, but in theory I expect the storage virtualisation layer could support any FS. This also means that adding a new disk requires a parity sync; the way this is usually done is by “pre-clearing” the new disk to all zeroes, since &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;a xor 0 = a&lt;/code&gt;, meaning that the existing disks do not need updating. Unfortunately this means you can’t officially add a full disk to Unraid, though I expect it should be theoretically possible if you do a full parity sync afterwards. The other disadvantage of this is that a parity sync or check time is proportional to the size of your largest data drive, regardless of how much actual space is used.&lt;/p&gt;
+
+&lt;p&gt;SnapRAID OTOH does not really care about filesystems or block devices; it just works on directories, and is so relaxed about semantics that it even runs fine on Windows. You can start off with full drives, as I did when I moved from Unraid to SnapRAID. Even the parity itself is just plain files rather than requiring a raw block device, as Unraid does, and will be proportional to actual usage, meaning you can take a risk and temporarily overcommit a parity drive smaller than a data drive, as long as you don’t use more storage on a single drive than the parity drive can hold.&lt;/p&gt;
+
+&lt;h1 id=&quot;live-vs-snapshot-parity&quot;&gt;Live vs snapshot parity&lt;/h1&gt;
+
+&lt;p&gt;The main difference between Unraid’s storage system and SnapRAID is that Unraid runs as a daemon, constantly maintaining the virtual devices discussed previously, while SnapRAID is actually just a set of terminating commands that you run manually or on a schedule. You add/delete/update files and run &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;snapraid sync&lt;/code&gt;. If a disk fails, you install, format, and mount a new one, then tell SnapRAID to start restoring the files onto it. You won’t have access to all your files until this finishes. This also means your new files are unprotected until you run a sync, and if you delete files from one drive, you remove protection from &lt;em&gt;some&lt;/em&gt; files on other drives until you sync again, though the integrity features described later mean it should never result in silent corruption of restored files.&lt;/p&gt;
+
+&lt;p&gt;Unraid is more like a traditional RAID setup. Parity is written before returning “success” to the writing program. Normal reads on a healthy array only use one data disk, but when a disk fails the system will immediately start using the other disks to emulate it from parity, allowing you to continue using the whole array without interruption. Ironically this means that &lt;em&gt;Un&lt;/em&gt;raid is more “real” RAID than Snap&lt;em&gt;RAID&lt;/em&gt; IMO, since I consider high-availability to be the main purpose of RAID.&lt;/p&gt;
+
+&lt;p&gt;This does mean that a file deleted from Unraid is deleted immediately, while SnapRAID allows you until the next sync to notice your mistake and restore it, however this should be considered a little bonus rather than something to rely on. If you really need that, use a filesystem with proper snapshots like ZFS, and remember that snapshots and disk redundancy are still not a substitute for offsite backup.&lt;/p&gt;
+
+&lt;h1 id=&quot;the-mover&quot;&gt;The mover&lt;/h1&gt;
+
+&lt;p&gt;Writing to hard drives can be slow, especially since Unraid array writes are limited by the speed of the parity disk. Unraid provides a built in utility to use an SSD as a write cache. Files are initially written to the SSD, and on a schedule (by default, in the early hours of the morning), they are moved to the array proper. Unlike the rest of Unraid, this works at a file, rather than block, level. The SSD is included in the union mount so it’s essentially transparent to the user. Since files on the cache are not covered by array parity, there is built in support for using two SSDs in RAID1 using Btrfs.&lt;/p&gt;
+
+&lt;p&gt;SnapRAID doesn’t have anything like this, but the concept is fairly simple, so it shouldn’t be too hard to write your own script using rsync and cron or systemd timers, or just do it by hand. Your writes aren’t bottlenecked by parity drives in the first place, due to the snapshot model.&lt;/p&gt;
+
+&lt;h1 id=&quot;scrubbing-and-integrity&quot;&gt;Scrubbing and integrity&lt;/h1&gt;
+
+&lt;p&gt;Both systems can perform scrubs/parity checks, however Unraid is more limited.&lt;/p&gt;
+
+&lt;p&gt;On a base install, Unraid parity checks are all-or-nothing, while SnapRAID defaults to scanning 8% of the files with the oldest scrub date, meaning that every file is checked every three months if you run the command weekly. As discussed before, Unraid has to scan the whole block device while SnapRAID just scans actual files.&lt;/p&gt;
+
+&lt;p&gt;Unraid suffers from the same problem as traditional RAID setups: if the calculated parity does not match the stored parity, is it the data or the parity which is wrong? SnapRAID is more similar to ZFS in that it stores actual file checksums, so can always answer correctly (beyond reasonable doubt). Presumably using dual parity on Unraid should help here.&lt;/p&gt;
+
+&lt;p&gt;Silent data corruption on hard disks is often considered to be virtually a myth, since it would be very unlikely to happen in such a way that the hard disk’s own error correction doesn’t detect it and return a media error, however it’s not the only way that the parity can become desynced. I believe Unraid is vulnerable to a “write hole” if power is lost during a write, whereas SnapRAID performs its syncs in a transactional manner, so can safely resume them.&lt;/p&gt;
+
+&lt;p&gt;As a bonus, SnapRAID also provides a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;dup&lt;/code&gt; command to list duplicate files, and also supports hard links, so it may be possible to leverage these for some limited deduplication support.&lt;/p&gt;
+
+&lt;h1 id=&quot;summary&quot;&gt;Summary&lt;/h1&gt;
+
+&lt;p&gt;Both are great solutions. Unraid is more opinionated while SnapRAID is more flexible. There are tools to simplify SnapRAID setup, giving it an Unraid-like UX, but the reverse - using Unraid as a facet of an existing Linux install - is not possible. SnapRAID’s unique advantage is the file-based model, while Unraid’s is the fact that it provides high availability like a traditional RAID system. The checksumming built into SnapRAID is nice, but there are Unraid plugins that do similar things.&lt;/p&gt;</content><author><name></name></author><category term="tech" /><category term="storage" /><category term="comparison" /><summary type="html">Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup.</summary></entry><entry><title type="html">Bin packing strategies for union mounts</title><link href="https://markhenrick.site/2020/11/03/binpacking.html" rel="alternate" type="text/html" title="Bin packing strategies for union mounts" /><published>2020-11-03T20:34:00+00:00</published><updated>2020-11-03T20:34:00+00:00</updated><id>https://markhenrick.site/2020/11/03/binpacking</id><content type="html" xml:base="https://markhenrick.site/2020/11/03/binpacking.html">&lt;p&gt;Recently I’ve been configuring an old desktop as a NAS/media centre. I settled on using a “JBOD plus redundancy” system like Unraid or SnapRAID+mergerfs for the flexibility that it provides, as opposed to something more enterprise like FreeNAS/ZFS or a traditional RAID setup.&lt;/p&gt;
+
+&lt;p&gt;I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable &lt;a href=&quot;https://en.wikipedia.org/wiki/Union_mount&quot;&gt;union mount&lt;/a&gt; view. This isn’t as performant as “real” RAID, but for the scenario of media storage that’s usually not an issue, and in fact has the advantage of only spinning one disk at a time.&lt;/p&gt;
+
+&lt;p&gt;Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn’t matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs.&lt;/p&gt;
+
+&lt;!--more--&gt;
+
+&lt;p&gt;Each solution offers a different unique feature that can help with this. Unraid has a “maximum split level”. For example if your schema is &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;share root/TV/Show Name/Season 1/episode.mkv&lt;/code&gt;, then you could set the maximum split to two to colocate entire series, or three to colocate only seasons. Mergerfs includes “most-shared path” variants of most strategies, which will try to put new files in an existing directory on the same drive, then move up a level and try again if they won’t fit.&lt;/p&gt;
+
+&lt;p&gt;In either case, the raw storage devices are exposed too, so you can always manually manage where things are put. Unraid comes with a web interface to show you where files are allocated, and the third-party “Unbalance” plugin makes it easy to relocate them. Mergerfs is a little more manual. I execute &lt;a href=&quot;https://gist.github.com/markhenrick/cfc9ba9ed78344ab58cdff88381bfdc2&quot;&gt;this script&lt;/a&gt; that I wrote in the root of the TV shows directory, and then manually use Midnight Commander to move things. I’m planning to work on a more automated solution.&lt;/p&gt;
+
+&lt;h1 id=&quot;bin-packing&quot;&gt;Bin packing&lt;/h1&gt;
+
+&lt;p&gt;The problem of selecting a bin (drive) to put an item (file) in is known as the &lt;a href=&quot;https://en.wikipedia.org/wiki/Bin_packing&quot;&gt;bin-packing problem&lt;/a&gt;; specifically, the offline variant, meaning we don’t have foresight of the files that will come in the future and we’d rather not move them once allocated.&lt;/p&gt;
+
+&lt;p&gt;The formal problem described in that article assumes all bins are the same size, which is not the case with my setup. It also considers items of radically different sizes and tries to optimise for the maximum total storage. This is not something I’m concerned with, since the drive are usually so much bigger than the files, and you’re ideally leaving them at &amp;lt;90% usage, so efficiency differences should be negligible.&lt;/p&gt;
+
+&lt;p&gt;The strategies are known by different names, so here’s a terminology table. Remember that lus and mfs are equivalent if all bins are the same size.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Name on Wikipedia&lt;/th&gt;
+      &lt;th&gt;Name in Unraid&lt;/th&gt;
+      &lt;th&gt;Name in mergerfs&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;First-Fit?&lt;/td&gt;
+      &lt;td&gt;Fill-up&lt;/td&gt;
+      &lt;td&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ff&lt;/code&gt; (first found)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;-&lt;/td&gt;
+      &lt;td&gt;High-water&lt;/td&gt;
+      &lt;td&gt;-&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Best-Fit?&lt;/td&gt;
+      &lt;td&gt;-&lt;/td&gt;
+      &lt;td&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lfs&lt;/code&gt; (least free space)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Worst-Fit?&lt;/td&gt;
+      &lt;td&gt;-&lt;/td&gt;
+      &lt;td&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lus&lt;/code&gt; (least used space)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Worst-Fit?&lt;/td&gt;
+      &lt;td&gt;Most-free&lt;/td&gt;
+      &lt;td&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;mfs&lt;/code&gt; (most free space)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;-&lt;/td&gt;
+      &lt;td&gt;-&lt;/td&gt;
+      &lt;td&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pfrd&lt;/code&gt; (percentage free random distribution)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;-&lt;/td&gt;
+      &lt;td&gt;-&lt;/td&gt;
+      &lt;td&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;rand&lt;/code&gt; (random)&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;I wrote a &lt;a href=&quot;https://github.com/markhenrick/binpackingsim&quot;&gt;little utility&lt;/a&gt; to simulate the different strategies of Unraid and mergerfs. Its main flaw is that it does not test the path-preservation feature of mergerfs, since it simulates all the files being dropped in the same directory.&lt;/p&gt;
+
+&lt;p&gt;I tested it using the scenario of storing 4GB files into drives with sizes (1, 4, 4, 2)TB, until they’re full. The key thing I was looking for in these plots is the separation of the lines. In many strategies the orange and green, and red and blue, lines follow almost the same trajectory, meaning that files are being alternatively assigned between the two during some periods, which would manifest as a fragmented TV show.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.youtube.com/watch?v=NOmzX3bFpZ8&quot;&gt;Now then&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;first&quot;&gt;First&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020-11-03-binpacking/first.png&quot; alt=&quot;First strategy plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The simplest strategy, and does a decent job, as long as you don’t mind your drives being used somewhat disproportionally.&lt;/p&gt;
+
+&lt;h2 id=&quot;least-free-space&quot;&gt;Least-free space&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020-11-03-binpacking/lfs.png&quot; alt=&quot;LFS strategy plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This is what I’m currently using on my setup.&lt;/p&gt;
+
+&lt;h2 id=&quot;least-used-space&quot;&gt;Least-used space&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020-11-03-binpacking/lus.png&quot; alt=&quot;LUS strategy plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This makes good proportionate use of the drives, but has poor separation of drives 1 and 2.&lt;/p&gt;
+
+&lt;h2 id=&quot;most-free-space&quot;&gt;Most-free space&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020-11-03-binpacking/mfs.png&quot; alt=&quot;MFS strategy plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Good proportionate use, but pretty much the worst strategy for colocation.&lt;/p&gt;
+
+&lt;h2 id=&quot;high-water&quot;&gt;High-water&lt;/h2&gt;
+
+&lt;p&gt;This is an Unraid-specific strategy. Quoting from the UI&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;High-water Choose the lowest numbered disk with free space still above the current high water mark. The high water mark is initialized with the size of the largest data disk divided by 2. If no disk has free space above the current high water mark, divide the high water mark by 2 and choose again.&lt;/p&gt;
+
+  &lt;p&gt;The goal of High-water is to write as much data as possible to each disk (in order to minimize how often disks need to be spun up), while at the same time, try to keep the same amount of free space on each disk (in order to distribute data evenly across the array).&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020-11-03-binpacking/high_water.png&quot; alt=&quot;High-water strategy plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This appears to fulfill its stated goal, making approximately equal use of drives &lt;em&gt;and&lt;/em&gt; having good separation of lines. I’d probably use this if I were on Unraid.&lt;/p&gt;
+
+&lt;h2 id=&quot;random&quot;&gt;Random&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020-11-03-binpacking/random.png&quot; alt=&quot;Random strategy plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Basically a non-deterministic version of LUS.&lt;/p&gt;
+
+&lt;h2 id=&quot;percentage-free-random-distribution&quot;&gt;Percentage-Free Random Distribution&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2020-11-03-binpacking/pfrd.png&quot; alt=&quot;pfrd strategy plot&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;An interesting strategy, but not good for my use case.&lt;/p&gt;
+
+&lt;h1 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h1&gt;
+
+&lt;p&gt;So in short, I would recommend&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;If you’re on Unraid just use high-water tbh. I think it’s the default too&lt;/li&gt;
+  &lt;li&gt;If you want colocation, first off make use of the features like maximum split or path preservation that I described earlier, then use LFS or first&lt;/li&gt;
+  &lt;li&gt;If you want equal usage of drives, use LUS&lt;/li&gt;
+&lt;/ul&gt;</content><author><name></name></author><category term="tech" /><category term="storage" /><category term="comparison" /><category term="coding" /><summary type="html">Recently I’ve been configuring an old desktop as a NAS/media centre. I settled on using a “JBOD plus redundancy” system like Unraid or SnapRAID+mergerfs for the flexibility that it provides, as opposed to something more enterprise like FreeNAS/ZFS or a traditional RAID setup. I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable union mount view. This isn’t as performant as “real” RAID, but for the scenario of media storage that’s usually not an issue, and in fact has the advantage of only spinning one disk at a time. Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn’t matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs.</summary></entry></feed>
