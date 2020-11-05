@@ -19,7 +19,7 @@ In either case, the raw storage devices are exposed too, so you can always manua
 
 # Bin packing
 
-The problem of selecting a bin (drive) to put an item (file) in is known as the [bin-packing problem](https://en.wikipedia.org/wiki/Bin_packing); specifically, the offline variant, meaning we don't have foresight of the files that will come in the future and we'd rather not move them once allocated.
+The problem of selecting a bin (drive) to put an item (file) in is known as the [bin-packing problem](https://en.wikipedia.org/wiki/Bin_packing); specifically, the online variant, meaning we don't have foresight of the files that will come in the future and we'd rather not move them once allocated.
 
 The formal problem described in that article assumes all bins are the same size, which is not the case with my setup. It also considers items of radically different sizes and tries to optimise for the maximum total storage. This is not something I'm concerned with, since the drive are usually so much bigger than the files, and you're ideally leaving them at <90% usage, so efficiency differences should be negligible.
 
