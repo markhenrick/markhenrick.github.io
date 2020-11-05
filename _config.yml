@@ -31,7 +31,6 @@ github_username: markhenrick
 # Build settings
 source: src
 destination: docs
-theme: minima
 show_excerpts: true
 excerpt_separator: <!--more-->
 plugins:
