@@ -33,7 +33,7 @@ source: src
 destination: docs
 show_excerpts: true
 excerpt_separator: <!--more-->
-rss: Blog RSS feed
+rss: RSS feed
 plugins:
   - jekyll-feed
 
