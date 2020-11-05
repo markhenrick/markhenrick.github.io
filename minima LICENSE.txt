@@ -1,3 +1,5 @@
+The theme of this site is based on Minima, which has the following license
+
 The MIT License (MIT)
 
 Copyright (c) 2016-present Parker Moore and the minima contributors
