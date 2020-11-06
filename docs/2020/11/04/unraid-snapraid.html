@@ -89,7 +89,7 @@
     </tr>
     <tr>
       <td>Web GUI built-in</td>
-      <td>Try OpenMediaVault</td>
+      <td><a href="https://michaelxander.com/diy-nas/">Try OpenMediaVault</a></td>
     </tr>
     <tr>
       <td>Task scheduling built-in</td>
@@ -178,7 +178,7 @@
 
 <h1 id="complete-package-vs-just-redundancy">Complete package vs just redundancy</h1>
 
-<p>The first difference to understand is that “Unraid” refers to a whole operating system that provides redundancy, union mounting, networked file access, monitoring, scheduling, notifications, VM and Docker management, and a web GUI to configure it all. On the other hand SnapRAID is <em>just</em> a utility for adding redundancy to a set of existing mountpoints, and everything else must be provided elsewhere. I have heard that OpenMediaVault provides an Unraid-like experience for SnapRAID and mergerfs. I haven’t tried it myself yet, but will try to do a write-up if I do.</p>
+<p>The first difference to understand is that “Unraid” refers to a whole operating system that provides redundancy, union mounting, networked file access, monitoring, scheduling, notifications, VM and Docker management, and a web GUI to configure it all. On the other hand SnapRAID is <em>just</em> a utility for adding redundancy to a set of existing mountpoints, and everything else must be provided elsewhere. OpenMediaVault with plugins can offer an Unraid-like experience for SnapRAID+mergerfs - <a href="https://michaelxander.com/diy-nas/">see here</a>.</p>
 
 <p>Almost everyone using SnapRAID will want union mounting (the ability to view all the disks as one pool). SnapRAID comes with built-in support for a read-only union view, in the form of a command which will populate a pool directory with symlinks to the actual files. Most users will want to replace this with something more powerful that can offer live updates and write support. The most popular solution is mergerfs, though I think Windows users often go with Stablebit Drivepool. I wrote <a href="/2020/11/03/binpacking.html">a post comparing the write strategies of mergerfs and Unraid</a>, but the executive summary is that union mounting is a fairly solved problem and both Unraid and mergerfs do it well. Mergerfs is more powerful, but assumes more expertise from users.</p>
 

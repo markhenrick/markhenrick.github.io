@@ -21,7 +21,7 @@ See the sections beneath the table for discussion of these points. Summary at th
 | Sharing built-in | Manually set-up SMB or NFS or whatever |
 | SMART monitoring built-in | Use smartd |
 | Email and webhook notifications built-in | Manual setup |
-| Web GUI built-in | Try OpenMediaVault |
+| Web GUI built-in | [Try OpenMediaVault](https://michaelxander.com/diy-nas/) |
 | Task scheduling built-in | No task scheduling, and remember that syncs and checks have to be run manually. Community systemd units exist |
 | Easy UI for VMs and Docker | Too many alternatives to list. Maybe Proxmox? |
 | Opinionated with a big community, good for beginners or people who want to "set it and forget it" | Go your own way, good for people who want more control or to integrate it with an existing server setup |
@@ -53,7 +53,7 @@ The main disadvantage of Unraid is that it's "all-or-nothing", as discussed in t
 
 # Complete package vs just redundancy
 
-The first difference to understand is that "Unraid" refers to a whole operating system that provides redundancy, union mounting, networked file access, monitoring, scheduling, notifications, VM and Docker management, and a web GUI to configure it all. On the other hand SnapRAID is *just* a utility for adding redundancy to a set of existing mountpoints, and everything else must be provided elsewhere. I have heard that OpenMediaVault provides an Unraid-like experience for SnapRAID and mergerfs. I haven't tried it myself yet, but will try to do a write-up if I do.
+The first difference to understand is that "Unraid" refers to a whole operating system that provides redundancy, union mounting, networked file access, monitoring, scheduling, notifications, VM and Docker management, and a web GUI to configure it all. On the other hand SnapRAID is *just* a utility for adding redundancy to a set of existing mountpoints, and everything else must be provided elsewhere. OpenMediaVault with plugins can offer an Unraid-like experience for SnapRAID+mergerfs - [see here](https://michaelxander.com/diy-nas/).
 
 Almost everyone using SnapRAID will want union mounting (the ability to view all the disks as one pool). SnapRAID comes with built-in support for a read-only union view, in the form of a command which will populate a pool directory with symlinks to the actual files. Most users will want to replace this with something more powerful that can offer live updates and write support. The most popular solution is mergerfs, though I think Windows users often go with Stablebit Drivepool. I wrote [a post comparing the write strategies of mergerfs and Unraid]({% post_url 2020-11-03-binpacking %}), but the executive summary is that union mounting is a fairly solved problem and both Unraid and mergerfs do it well. Mergerfs is more powerful, but assumes more expertise from users.
 
