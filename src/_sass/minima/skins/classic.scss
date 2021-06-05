@@ -1,28 +1,30 @@
 @charset "utf-8";
 
-$brand-color:           #828282 !default;
-$brand-color-light:     lighten($brand-color, 40%) !default;
-$brand-color-dark:      darken($brand-color, 25%) !default;
+:root {
+  --brand-color:           #828282;
+  --brand-color-light:     #e8e8e8;
+  --brand-color-dark:      #424242;
 
-$site-title-color:      $brand-color-dark !default;
+  --site-title-color:      var(--brand-color-dark);
 
-$text-color:            #111111 !default;
-$background-color:      #fdfdfd !default;
-$code-background-color: #eeeeff !default;
+  --text-color:            #111111;
+  --background-color:      #fdfdfd;
+  --code-background-color: #eeeeff;
 
-$link-base-color:       #2a7ae2 !default;
-$link-visited-color:    darken($link-base-color, 15%) !default;
-$link-hover-color:      $text-color !default;
+  --link-base-color:       #2a7ae2;
+  --link-visited-color:    #1756a9;
+  --link-hover-color:      var(--text-color);
 
-$border-color-01:       $brand-color-light !default;
-$border-color-02:       lighten($brand-color, 35%) !default;
-$border-color-03:       $brand-color-dark !default;
+  --border-color-01:       var(--brand-color-light);
+  --border-color-02:       #dbdbdb;
+  --border-color-03:       var(--brand-color-dark);
 
-$table-text-color:      lighten($text-color, 18%) !default;
-$table-zebra-color:     lighten($brand-color, 46%) !default;
-$table-header-bg-color: lighten($brand-color, 43%) !default;
-$table-header-border:   lighten($brand-color, 37%) !default;
-$table-border-color:    $border-color-01 !default;
+  --table-text-color:      #3f3f3f;
+  --table-zebra-color:     #f7f7f7;
+  --table-header-bg-color: #f0f0f0;
+  --table-header-border:   #e0e0e0;
+  --table-border-color:    var(--border-color-01);
+}
 
 
 // Syntax highlighting styles should be adjusted appropriately for every "skin"
