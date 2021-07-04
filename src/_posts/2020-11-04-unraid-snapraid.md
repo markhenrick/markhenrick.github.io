@@ -2,6 +2,7 @@
 layout: post
 title: "Unraid vs Snapraid"
 date: 2020-11-04 18:00:00 +0000
+date_updated: 2021-07-04 16:30:00 +0000
 tags: tech storage comparison
 ---
 
@@ -30,11 +31,13 @@ See the sections beneath the table for discussion of these points. Summary at th
 | Supports XFS or Btrfs (+ LUKS) | Supports virtually any mountpoint, even Windows hosts |
 | Parity sync duration proportional to raw block size | Parity sync duration proportional to actual usage. Partial checks supported OOTB |
 | Consumes entire block device for parity | Parity stored as plain files |
+| No fragmentation | Small files can lead to fragmentation which lead to the parity disk filling prematurely |
+| Low RAM usage | High RAM usage. Tradeoff between RAM usage and fragmentation |
 | **Live parity** | **Snapshot parity** |
 | Data is protected immediately | Unsynced data is unprotected. Deleted or changed data can remove protection from files on other drives until the next sync. Cannot sync whilst writing |
 | Automatically simulates failed disks from parity | Must mount a replacement disk and wait for lost files to be recovered one-by-one |
 | Write speed bottlenecked by parity disks (without mover) | Parity sync can be run during quiet hours |
-| No protection against accidental deletion | Snapshot parity gives you a grace period to recover from stupid mistakes |
+| No protection against accidental deletion | Snapshot parity gives you a grace period to recover from stupid mistakes (affecting no more data disks than you have parity) |
 | Not a substitute for a proper offsite backup | Also not a substitute for a proper offsite backup |
 | **"Mover" built-in** | **rsync + cron?** |
 | **No built-in integrity checks** (community plugins available) | **Checksums all files** |
@@ -65,11 +68,13 @@ The flexibility of being able to add SnapRAID to an existing system allows me to
 
 # Blocks vs files
 
-Another key difference is that Unraid works on block devices while SnapRAID works on files. IMO SnapRAID is the clear winner here.
+Another key difference is that Unraid works on block devices while SnapRAID works on files. This makes SnapRAID more convenient, but requires somewhat more resources.
 
 Unraid is more like mdadm, where you take some raw block devices, create virtual RAID devices, and then work on top of those. The Unraid OS only supports XFS or Btrfs with optional LUKS, but in theory I expect the storage virtualisation layer could support any FS. This also means that adding a new disk requires a parity sync; the way this is usually done is by "pre-clearing" the new disk to all zeroes, since `a xor 0 = a`, meaning that the existing disks do not need updating. Unfortunately this means you can't officially add a full disk to Unraid, though I expect it should be theoretically possible if you do a full parity sync afterwards. The other disadvantage of this is that a parity sync or check time is proportional to the size of your largest data drive, regardless of how much actual space is used.
 
-SnapRAID OTOH does not really care about filesystems or block devices; it just works on directories, and is so relaxed about semantics that it even runs fine on Windows. You can start off with full drives, as I did when I moved from Unraid to SnapRAID. Even the parity itself is just plain files rather than requiring a raw block device, as Unraid does, and will be proportional to actual usage, meaning you can take a risk and temporarily overcommit a parity drive smaller than a data drive, as long as you don't use more storage on a single drive than the parity drive can hold.
+SnapRAID OTOH does not really care about filesystems or block devices; it just works on directories, and is so relaxed about semantics that it even runs fine on Windows. You can start off with full drives, as I did when I moved from Unraid to SnapRAID. Even the parity itself is just plain files rather than requiring a raw block device, as Unraid does, and will be proportional to actual usage, meaning you can take a risk and temporarily overcommit a parity drive smaller than a data drive, as long as you don't use more storage on a single drive than the parity drive can hold. Technically the parity file cannot use the whole disk, due to the FS overhead, but the data disks also have that "issue", and in any case it should be a minor overhead.
+
+The downside of the file parity is less efficient use of resources. SnapRAID can use quite a lot of RAM when performing a sync, as it has to hold data structures for the more complicated way its parity works, compared to `A[x] xor B[x] = P[x]`. The other major issue is that of fragmentation. Having files smaller than the parity `block_size` results in more space being allocated for parity than the file actually uses. If you have a lot of small files (e.g. photos), this can add up to a significant amount of space wasted. You can decrease the block size, but that increases the RAM used (see the [manual](https://www.snapraid.it/manual), section 7.8). When I ran into this, I calculated that it was cheaper to have to spend a bit more on disks than upgrade my RAM. It's also generally ill-advised to fill disks to the brim on any system, but keep in mind that just filling one data disk can induce this problem.
 
 # Live vs snapshot parity
 
@@ -77,7 +82,7 @@ The main difference between Unraid's storage system and SnapRAID is that Unraid 
 
 Unraid is more like a traditional RAID setup. Parity is written before returning "success" to the writing program. Normal reads on a healthy array only use one data disk, but when a disk fails the system will immediately start using the other disks to emulate it from parity, allowing you to continue using the whole array without interruption. Ironically this means that *Un*raid is more "real" RAID than Snap*RAID* IMO, since I consider high-availability to be the main purpose of RAID.
 
-This does mean that a file deleted from Unraid is deleted immediately, while SnapRAID allows you until the next sync to notice your mistake and restore it, however this should be considered a little bonus rather than something to rely on. If you really need that, use a filesystem with proper snapshots like ZFS, and remember that snapshots and disk redundancy are still not a substitute for offsite backup.
+This does mean that a file deleted from Unraid is deleted immediately, while SnapRAID allows you until the next sync to notice your mistake and restore it, although this is only certain to work if the mistake was confined to one disk (otherwise you may have deleted files from other disks which were providing each other with parity). This should be considered a little bonus rather than something to rely on. If you really need that, use a filesystem with proper snapshots like ZFS, and remember that snapshots and disk redundancy are still not a substitute for offsite backup.
 
 # The mover
 

@@ -2,6 +2,7 @@
 layout: post
 title: "Bin packing strategies for union mounts"
 date: 2020-11-03 20:34:00 +0000
+date_updated: 2021-07-04 16:30:00 +0000
 tags: tech storage comparison coding
 ---
 
@@ -14,6 +15,8 @@ Creating a read-only union mount is simple enough, but when you add writeability
 <!--more-->
 
 Each solution offers a different unique feature that can help with this. Unraid has a "maximum split level". For example if your schema is `share root/TV/Show Name/Season 1/episode.mkv`, then you could set the maximum split to two to colocate entire series, or three to colocate only seasons. Mergerfs includes "most-shared path" variants of most strategies, which will try to put new files in an existing directory on the same drive, then move up a level and try again if they won't fit.
+
+When using SnapRAID, one potential issue with strategies that fill disks unevenly is increasing the likelihood of wasted parity space. See [this post]({% post_url 2020-11-04-unraid-snapraid %}), CTRL+F "fragmentation".
 
 In either case, the raw storage devices are exposed too, so you can always manually manage where things are put. Unraid comes with a web interface to show you where files are allocated, and the third-party "Unbalance" plugin makes it easy to relocate them. Mergerfs is a little more manual. I execute [this script](https://gist.github.com/markhenrick/cfc9ba9ed78344ab58cdff88381bfdc2) that I wrote in the root of the TV shows directory, and then manually use Midnight Commander to move things. I'm planning to work on a more automated solution.
 
@@ -95,4 +98,4 @@ So in short, I would recommend
 
 * If you're on Unraid just use high-water tbh. I think it's the default too
 * If you want colocation, first off make use of the features like maximum split or path preservation that I described earlier, then use LFS or first
-* If you want equal usage of drives, use LUS
+* If you want equal usage of drives (to reduce fragmentation), use LUS

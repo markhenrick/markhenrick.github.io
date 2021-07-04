@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="https://markhenrick.site/feed.xml" rel="self" type="application/atom+xml" /><link href="https://markhenrick.site/" rel="alternate" type="text/html" /><updated>2021-07-04T16:18:08+01:00</updated><id>https://markhenrick.site/feed.xml</id><title type="html">Mark Henrick</title><entry><title type="html">Dark theme is now live!</title><link href="https://markhenrick.site/2021/06/05/prefers-media-scheme.html" rel="alternate" type="text/html" title="Dark theme is now live!" /><published>2021-06-05T22:35:00+01:00</published><updated>2021-06-05T22:35:00+01:00</updated><id>https://markhenrick.site/2021/06/05/prefers-media-scheme</id><content type="html" xml:base="https://markhenrick.site/2021/06/05/prefers-media-scheme.html">&lt;p&gt;This site should now use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;prefers-color-scheme&lt;/code&gt; to correctly switch to dark mode. Apologies for blinding you&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="https://markhenrick.site/feed.xml" rel="self" type="application/atom+xml" /><link href="https://markhenrick.site/" rel="alternate" type="text/html" /><updated>2021-07-04T16:43:04+01:00</updated><id>https://markhenrick.site/feed.xml</id><title type="html">Mark Henrick</title><entry><title type="html">Dark theme is now live!</title><link href="https://markhenrick.site/2021/06/05/prefers-media-scheme.html" rel="alternate" type="text/html" title="Dark theme is now live!" /><published>2021-06-05T22:35:00+01:00</published><updated>2021-06-05T22:35:00+01:00</updated><id>https://markhenrick.site/2021/06/05/prefers-media-scheme</id><content type="html" xml:base="https://markhenrick.site/2021/06/05/prefers-media-scheme.html">&lt;p&gt;This site should now use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;prefers-color-scheme&lt;/code&gt; to correctly switch to dark mode. Apologies for blinding you&lt;/p&gt;
 
 &lt;!--more--&gt;
 
@@ -87,6 +87,14 @@
       &lt;td&gt;Parity stored as plain files&lt;/td&gt;
     &lt;/tr&gt;
     &lt;tr&gt;
+      &lt;td&gt;No fragmentation&lt;/td&gt;
+      &lt;td&gt;Small files can lead to fragmentation which lead to the parity disk filling prematurely&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Low RAM usage&lt;/td&gt;
+      &lt;td&gt;High RAM usage. Tradeoff between RAM usage and fragmentation&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
       &lt;td&gt;&lt;strong&gt;Live parity&lt;/strong&gt;&lt;/td&gt;
       &lt;td&gt;&lt;strong&gt;Snapshot parity&lt;/strong&gt;&lt;/td&gt;
     &lt;/tr&gt;
@@ -104,7 +112,7 @@
     &lt;/tr&gt;
     &lt;tr&gt;
       &lt;td&gt;No protection against accidental deletion&lt;/td&gt;
-      &lt;td&gt;Snapshot parity gives you a grace period to recover from stupid mistakes&lt;/td&gt;
+      &lt;td&gt;Snapshot parity gives you a grace period to recover from stupid mistakes (affecting no more data disks than you have parity)&lt;/td&gt;
     &lt;/tr&gt;
     &lt;tr&gt;
       &lt;td&gt;Not a substitute for a proper offsite backup&lt;/td&gt;
@@ -153,11 +161,13 @@
 
 &lt;h1 id=&quot;blocks-vs-files&quot;&gt;Blocks vs files&lt;/h1&gt;
 
-&lt;p&gt;Another key difference is that Unraid works on block devices while SnapRAID works on files. IMO SnapRAID is the clear winner here.&lt;/p&gt;
+&lt;p&gt;Another key difference is that Unraid works on block devices while SnapRAID works on files. This makes SnapRAID more convenient, but requires somewhat more resources.&lt;/p&gt;
 
 &lt;p&gt;Unraid is more like mdadm, where you take some raw block devices, create virtual RAID devices, and then work on top of those. The Unraid OS only supports XFS or Btrfs with optional LUKS, but in theory I expect the storage virtualisation layer could support any FS. This also means that adding a new disk requires a parity sync; the way this is usually done is by “pre-clearing” the new disk to all zeroes, since &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;a xor 0 = a&lt;/code&gt;, meaning that the existing disks do not need updating. Unfortunately this means you can’t officially add a full disk to Unraid, though I expect it should be theoretically possible if you do a full parity sync afterwards. The other disadvantage of this is that a parity sync or check time is proportional to the size of your largest data drive, regardless of how much actual space is used.&lt;/p&gt;
 
-&lt;p&gt;SnapRAID OTOH does not really care about filesystems or block devices; it just works on directories, and is so relaxed about semantics that it even runs fine on Windows. You can start off with full drives, as I did when I moved from Unraid to SnapRAID. Even the parity itself is just plain files rather than requiring a raw block device, as Unraid does, and will be proportional to actual usage, meaning you can take a risk and temporarily overcommit a parity drive smaller than a data drive, as long as you don’t use more storage on a single drive than the parity drive can hold.&lt;/p&gt;
+&lt;p&gt;SnapRAID OTOH does not really care about filesystems or block devices; it just works on directories, and is so relaxed about semantics that it even runs fine on Windows. You can start off with full drives, as I did when I moved from Unraid to SnapRAID. Even the parity itself is just plain files rather than requiring a raw block device, as Unraid does, and will be proportional to actual usage, meaning you can take a risk and temporarily overcommit a parity drive smaller than a data drive, as long as you don’t use more storage on a single drive than the parity drive can hold. Technically the parity file cannot use the whole disk, due to the FS overhead, but the data disks also have that “issue”, and in any case it should be a minor overhead.&lt;/p&gt;
+
+&lt;p&gt;The downside of the file parity is less efficient use of resources. SnapRAID can use quite a lot of RAM when performing a sync, as it has to hold data structures for the more complicated way its parity works, compared to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;A[x] xor B[x] = P[x]&lt;/code&gt;. The other major issue is that of fragmentation. Having files smaller than the parity &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;block_size&lt;/code&gt; results in more space being allocated for parity than the file actually uses. If you have a lot of small files (e.g. photos), this can add up to a significant amount of space wasted. You can decrease the block size, but that increases the RAM used (see the &lt;a href=&quot;https://www.snapraid.it/manual&quot;&gt;manual&lt;/a&gt;, section 7.8). When I ran into this, I calculated that it was cheaper to have to spend a bit more on disks than upgrade my RAM. It’s also generally ill-advised to fill disks to the brim on any system, but keep in mind that just filling one data disk can induce this problem.&lt;/p&gt;
 
 &lt;h1 id=&quot;live-vs-snapshot-parity&quot;&gt;Live vs snapshot parity&lt;/h1&gt;
 
@@ -165,7 +175,7 @@
 
 &lt;p&gt;Unraid is more like a traditional RAID setup. Parity is written before returning “success” to the writing program. Normal reads on a healthy array only use one data disk, but when a disk fails the system will immediately start using the other disks to emulate it from parity, allowing you to continue using the whole array without interruption. Ironically this means that &lt;em&gt;Un&lt;/em&gt;raid is more “real” RAID than Snap&lt;em&gt;RAID&lt;/em&gt; IMO, since I consider high-availability to be the main purpose of RAID.&lt;/p&gt;
 
-&lt;p&gt;This does mean that a file deleted from Unraid is deleted immediately, while SnapRAID allows you until the next sync to notice your mistake and restore it, however this should be considered a little bonus rather than something to rely on. If you really need that, use a filesystem with proper snapshots like ZFS, and remember that snapshots and disk redundancy are still not a substitute for offsite backup.&lt;/p&gt;
+&lt;p&gt;This does mean that a file deleted from Unraid is deleted immediately, while SnapRAID allows you until the next sync to notice your mistake and restore it, although this is only certain to work if the mistake was confined to one disk (otherwise you may have deleted files from other disks which were providing each other with parity). This should be considered a little bonus rather than something to rely on. If you really need that, use a filesystem with proper snapshots like ZFS, and remember that snapshots and disk redundancy are still not a substitute for offsite backup.&lt;/p&gt;
 
 &lt;h1 id=&quot;the-mover&quot;&gt;The mover&lt;/h1&gt;
 
@@ -196,6 +206,8 @@
 &lt;!--more--&gt;
 
 &lt;p&gt;Each solution offers a different unique feature that can help with this. Unraid has a “maximum split level”. For example if your schema is &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;share root/TV/Show Name/Season 1/episode.mkv&lt;/code&gt;, then you could set the maximum split to two to colocate entire series, or three to colocate only seasons. Mergerfs includes “most-shared path” variants of most strategies, which will try to put new files in an existing directory on the same drive, then move up a level and try again if they won’t fit.&lt;/p&gt;
+
+&lt;p&gt;When using SnapRAID, one potential issue with strategies that fill disks unevenly is increasing the likelihood of wasted parity space. See &lt;a href=&quot;/2020/11/04/unraid-snapraid.html&quot;&gt;this post&lt;/a&gt;, CTRL+F “fragmentation”.&lt;/p&gt;
 
 &lt;p&gt;In either case, the raw storage devices are exposed too, so you can always manually manage where things are put. Unraid comes with a web interface to show you where files are allocated, and the third-party “Unbalance” plugin makes it easy to relocate them. Mergerfs is a little more manual. I execute &lt;a href=&quot;https://gist.github.com/markhenrick/cfc9ba9ed78344ab58cdff88381bfdc2&quot;&gt;this script&lt;/a&gt; that I wrote in the root of the TV shows directory, and then manually use Midnight Commander to move things. I’m planning to work on a more automated solution.&lt;/p&gt;
 
@@ -317,5 +329,5 @@
 &lt;ul&gt;
   &lt;li&gt;If you’re on Unraid just use high-water tbh. I think it’s the default too&lt;/li&gt;
   &lt;li&gt;If you want colocation, first off make use of the features like maximum split or path preservation that I described earlier, then use LFS or first&lt;/li&gt;
-  &lt;li&gt;If you want equal usage of drives, use LUS&lt;/li&gt;
+  &lt;li&gt;If you want equal usage of drives (to reduce fragmentation), use LUS&lt;/li&gt;
 &lt;/ul&gt;</content><author><name></name></author><category term="tech" /><category term="storage" /><category term="comparison" /><category term="coding" /><summary type="html">Recently I’ve been configuring an old desktop as a NAS/media centre. I settled on using a “JBOD plus redundancy” system like Unraid or SnapRAID+mergerfs for the flexibility that it provides, as opposed to something more enterprise like FreeNAS/ZFS or a traditional RAID setup. I intend to write a more thorough comparison of these two solutions in the future, but the short summary relevant to this article is that they use plain old filesystems like XFS on each disk and mount them independently, then provide a writeable union mount view. This isn’t as performant as “real” RAID, but for the scenario of media storage that’s usually not an issue, and in fact has the advantage of only spinning one disk at a time. Creating a read-only union mount is simple enough, but when you add writeability into the equation you have to decide on a strategy to select a drive to write new files to. In theory this shouldn’t matter, but in practice I want to colocate whole TV shows onto one drive, so that a data loss scenario does not result in me having half of 10 shows rather than 5 complete and 5 completely missing shows. I also wanted to write some code and draw some pretty graphs.</summary></entry></feed>
