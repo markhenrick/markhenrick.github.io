@@ -2,7 +2,7 @@
 layout: post
 title: "Bin packing strategies for union mounts"
 date: 2020-11-03 20:34:00 +0000
-date_updated: 2021-07-04 16:30:00 +0000
+last_modified_at: 2021-07-04 16:30:00 +0000
 tags: tech storage comparison coding
 ---
 
