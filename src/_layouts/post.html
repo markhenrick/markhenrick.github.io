@@ -12,7 +12,16 @@ layout: default
       </time>
       {%- if page.author -%}
         • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">{{ page.author }}</span></span>
-      {%- endif -%}</p>
+      {%- endif -%}
+      {%- if page.date_updated -%}
+        <br>
+        Updated: 
+        <time class="dt-published" datetime="{{ page.date_updated | date_to_xmlschema }}" itemprop="dateUpdated">
+          {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+          {{ page.date_updated  | date: date_format }}
+        </time>
+      {%- endif -%}
+    </p>
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
