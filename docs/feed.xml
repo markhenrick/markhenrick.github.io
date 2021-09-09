@@ -1,4 +1,121 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="https://markhenrick.site/feed.xml" rel="self" type="application/atom+xml" /><link href="https://markhenrick.site/" rel="alternate" type="text/html" /><updated>2021-07-04T16:47:45+01:00</updated><id>https://markhenrick.site/feed.xml</id><title type="html">Mark Henrick</title><entry><title type="html">Dark theme is now live!</title><link href="https://markhenrick.site/2021/06/05/prefers-media-scheme.html" rel="alternate" type="text/html" title="Dark theme is now live!" /><published>2021-06-05T22:35:00+01:00</published><updated>2021-06-05T22:35:00+01:00</updated><id>https://markhenrick.site/2021/06/05/prefers-media-scheme</id><content type="html" xml:base="https://markhenrick.site/2021/06/05/prefers-media-scheme.html">&lt;p&gt;This site should now use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;prefers-color-scheme&lt;/code&gt; to correctly switch to dark mode. Apologies for blinding you&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="https://markhenrick.site/feed.xml" rel="self" type="application/atom+xml" /><link href="https://markhenrick.site/" rel="alternate" type="text/html" /><updated>2021-09-09T22:44:35+01:00</updated><id>https://markhenrick.site/feed.xml</id><title type="html">Mark Henrick</title><entry><title type="html">systemd as a CI system</title><link href="https://markhenrick.site/2021/09/09/systemd-ci.html" rel="alternate" type="text/html" title="systemd as a CI system" /><published>2021-09-09T21:00:00+01:00</published><updated>2021-09-09T21:00:00+01:00</updated><id>https://markhenrick.site/2021/09/09/systemd-ci</id><content type="html" xml:base="https://markhenrick.site/2021/09/09/systemd-ci.html">&lt;p&gt;I make fairly extensive use of systemd for scripting tasks which I need to run repeatedly and possibly on schedule (or based on other triggers), and recording a log of the output. At work and among friends, people use Jenkins for the same purpose. This gave me a stupid idea - can I turn systemd into Jenkins, and use it to build Git codebases?&lt;/p&gt;
+
+&lt;!--more--&gt;
+
+&lt;p&gt;&lt;em&gt;Disclaimer: This is purely a bit of “what if?” fun, not serious advice&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;The basic idea is quite simple&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Write a timer to pull a git repo&lt;/li&gt;
+  &lt;li&gt;If a new change is found, trigger a oneshot service to build the project&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Writing this for each project would get quite repetitive, so I’d like to generify it as follows&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;The timer will be parameterised with the git URL, so I can do &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;systemctl enable systemd-ci-poll@$REPO&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;The builder service will expect an executable at &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$REPO/.systemd-ci/build&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h1 id=&quot;assumptions&quot;&gt;Assumptions&lt;/h1&gt;
+
+&lt;p&gt;Since this is just a proof of concept, I make the followingg assumptions&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Every project has a name marching &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;[a-Z0-9]+&lt;/code&gt;, to saves character escaping headaches&lt;/li&gt;
+  &lt;li&gt;Every project is already cloned in the workspace dir, and we’re only building the branch that’s been checked out&lt;/li&gt;
+  &lt;li&gt;I’m not including any sort of artefact archiving or workspace cleaning. That could be implemented if needed, but for this PoC I’ll take the &lt;em&gt;laissez-faire&lt;/em&gt; approach of leaving that to the build script&lt;/li&gt;
+  &lt;li&gt;We can always fast-forward. No force pushes!&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h1 id=&quot;system-setup&quot;&gt;System setup&lt;/h1&gt;
+
+&lt;p&gt;I deployed a fresh Ubuntu 20.04 LTS Linux container on Proxmox and made the following changes&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Installed &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;Add a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;systemd-ci&lt;/code&gt; user and group with the normal minimal permissions expected of a service user&lt;/li&gt;
+  &lt;li&gt;Create the workspace dir &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/var/lib/systemd-ci&lt;/code&gt; with owner &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;systemd-ci:systemd-ci&lt;/code&gt; and mode &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;770&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;the-builder-service&quot;&gt;The builder service&lt;/h1&gt;
+
+&lt;p&gt;This service is quite simple - just run an executable&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/systemd/system/systemd-ci-build@.service&lt;/code&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-systemd&quot; data-lang=&quot;systemd&quot;&gt;&lt;span class=&quot;k&quot;&gt;[Unit]&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;Description&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;Build a systemd-ci project
+&lt;span class=&quot;nt&quot;&gt;After&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;multi-user.target
+
+&lt;span class=&quot;k&quot;&gt;[Service]&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;Type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;oneshot
+&lt;span class=&quot;nt&quot;&gt;WorkingDirectory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;/var/lib/systemd-ci/%i
+&lt;span class=&quot;nt&quot;&gt;ExecStart&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;/var/lib/systemd-ci/%i/.systemd-ci/build
+&lt;span class=&quot;nt&quot;&gt;User&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;systemd-ci&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;We can test this in isolation, by just creating&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/var/lib/systemd-ci/test/.systemd-ci/build&lt;/code&gt; (mode: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;+x&lt;/code&gt;)&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash -eux&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;touch &lt;/span&gt;success
+&lt;span class=&quot;nb&quot;&gt;echo &lt;/span&gt;it works&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Then execute &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;systemctl start systemd-ci-build@test&lt;/code&gt; (remembering to do a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;daemon-reload&lt;/code&gt; first). Logs can be found with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;journalctl -u systemd-ci-build@test&lt;/code&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;the-trigger-service&quot;&gt;The trigger service&lt;/h1&gt;
+
+&lt;p&gt;So for the timer, we need to repeatedly pull the repository, and take note of when it changes. In accordance with assumption 4, let’s be really hacky and just &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;grep Fast-forward&lt;/code&gt; in the git output&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/systemd/system/systemd-ci-poll@.service&lt;/code&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-systemd&quot; data-lang=&quot;systemd&quot;&gt;&lt;span class=&quot;k&quot;&gt;[Unit]&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;Description&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;Poll a systemd-ci project repo and trigger a build if necessary
+&lt;span class=&quot;nt&quot;&gt;After&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;multi-user.target
+&lt;span class=&quot;nt&quot;&gt;OnSuccess&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;systemd-ci-build@%i
+
+&lt;span class=&quot;k&quot;&gt;[Service]&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;Type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;oneshot
+&lt;span class=&quot;nt&quot;&gt;WorkingDirectory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;/var/lib/systemd-ci/%i
+&lt;span class=&quot;nt&quot;&gt;ExecStart&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;/bin/bash -c &quot;git pull | grep Fast-forward&quot;
+&lt;span class=&quot;nt&quot;&gt;User&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;systemd-ci&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;And here we run into a problem. &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;OnSuccess&lt;/code&gt; was added in systemd 249, but this version of Ubuntu has 245. Luckily, bash has a negation operator, so I can use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;OnFailure&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ExecStart=/bin/bash -c &quot;! git...&lt;/code&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;the-polling-timer&quot;&gt;The polling timer&lt;/h1&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/systemd/system/systemd-ci-poll@.timer&lt;/code&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-systemd&quot; data-lang=&quot;systemd&quot;&gt;&lt;span class=&quot;k&quot;&gt;[Unit]&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;Description&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;Run a systemd-ci poll every 15m
+
+&lt;span class=&quot;k&quot;&gt;[Timer]&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;OnUnitInactiveSec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;15m
+
+&lt;span class=&quot;k&quot;&gt;[Install]&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;WantedBy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;timers.target&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;As far as I understand you need to enable &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;systemd-ci-poll@.timer&lt;/code&gt; at least once, in addition to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;systemd-ci-poll@$REPO.timer&lt;/code&gt;. Well, I guess that provides an easy way to turn the whole thing off if needed&lt;/p&gt;
+
+&lt;h1 id=&quot;project-creation-script&quot;&gt;Project creation script&lt;/h1&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;systemd-ci-init&lt;/code&gt; (mode &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;+x&lt;/code&gt;)&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash -eux&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# Syntax: sudo systemd-ci-init &amp;lt;repo url&amp;gt; &amp;lt;project name&amp;gt;&lt;/span&gt;
+
+&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; /var/lib/systemd-ci
+git clone &lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$2&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;chown&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-R&lt;/span&gt; systemd-ci:systemd-ci &lt;span class=&quot;nv&quot;&gt;$2&lt;/span&gt;
+systemctl &lt;span class=&quot;nb&quot;&gt;enable&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--now&lt;/span&gt; systemd-ci-poll@.timer
+systemctl &lt;span class=&quot;nb&quot;&gt;enable&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--now&lt;/span&gt; systemd-ci-poll@&lt;span class=&quot;nv&quot;&gt;$2&lt;/span&gt;.timer&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;h1 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h1&gt;
+
+&lt;p&gt;Yes, you can do it, no, you probably shouldn’t. The main problem is that you pollute the logs with “failed” polls, but I imagine this can be fixed if one is determined enough, but not on version 245&lt;/p&gt;</content><author><name></name></author><category term="tech" /><category term="coding" /><summary type="html">I make fairly extensive use of systemd for scripting tasks which I need to run repeatedly and possibly on schedule (or based on other triggers), and recording a log of the output. At work and among friends, people use Jenkins for the same purpose. This gave me a stupid idea - can I turn systemd into Jenkins, and use it to build Git codebases?</summary></entry><entry><title type="html">Dark theme is now live!</title><link href="https://markhenrick.site/2021/06/05/prefers-media-scheme.html" rel="alternate" type="text/html" title="Dark theme is now live!" /><published>2021-06-05T22:35:00+01:00</published><updated>2021-06-05T22:35:00+01:00</updated><id>https://markhenrick.site/2021/06/05/prefers-media-scheme</id><content type="html" xml:base="https://markhenrick.site/2021/06/05/prefers-media-scheme.html">&lt;p&gt;This site should now use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;prefers-color-scheme&lt;/code&gt; to correctly switch to dark mode. Apologies for blinding you&lt;/p&gt;
 
 &lt;!--more--&gt;
 
