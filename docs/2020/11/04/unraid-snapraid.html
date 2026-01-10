@@ -2,24 +2,24 @@
 <html lang="en"><head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
 <title>Unraid vs Snapraid | Mark Henrick</title>
-<meta name="generator" content="Jekyll v4.1.1" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Unraid vs Snapraid" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup." />
 <meta property="og:description" content="Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup." />
-<link rel="canonical" href="https://markhenrick.site/2020/11/04/unraid-snapraid.html" />
-<meta property="og:url" content="https://markhenrick.site/2020/11/04/unraid-snapraid.html" />
+<link rel="canonical" href="http://localhost:4000/2020/11/04/unraid-snapraid.html" />
+<meta property="og:url" content="http://localhost:4000/2020/11/04/unraid-snapraid.html" />
 <meta property="og:site_name" content="Mark Henrick" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-11-04T18:00:00+00:00" />
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Unraid vs Snapraid" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","description":"Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup.","headline":"Unraid vs Snapraid","dateModified":"2021-07-04T17:30:00+01:00","datePublished":"2020-11-04T18:00:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://markhenrick.site/2020/11/04/unraid-snapraid.html"},"url":"https://markhenrick.site/2020/11/04/unraid-snapraid.html","@context":"https://schema.org"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2021-07-04T17:30:00+01:00","datePublished":"2020-11-04T18:00:00+00:00","description":"Following on from my previous post, I’ve been experimenting with different setups for storing media on an old computer. The characteristics of this use case is that the files are relatively large, write-once-read-many, do not require high-speed or highly-parallel access, and the disks are a highly heterogenous jumble of spare drives, subject to frequent change. The requirements are just that I have a directory to dump files in, spread them across drives in some manner, and provide protection against up to two disk failures. This makes something like ZFS or Btrfs overkill for my setup, so the two solutions that I looked at were Unraid and a custom SnapRAID + mergerfs setup.","headline":"Unraid vs Snapraid","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2020/11/04/unraid-snapraid.html"},"url":"http://localhost:4000/2020/11/04/unraid-snapraid.html"}</script>
 <!-- End Jekyll SEO tag -->
-<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://markhenrick.site/feed.xml" title="Mark Henrick" /></head>
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Mark Henrick" /></head>
 <body><header class="site-header" role="banner">
 
   <div class="wrapper"><a class="site-title" rel="author" href="/">Mark Henrick</a><nav class="site-nav">
