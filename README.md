@@ -4,6 +4,7 @@ Built using Jekyll. Build steps are
 
 * Install `build-essentials`/`base-devel`/equivalent for your distro
 * Install Ruby and Gem
+* `gem install bundler`
 * `bundle install`
 * `bundle exec jekyll build`
 
