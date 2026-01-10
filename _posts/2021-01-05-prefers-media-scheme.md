@@ -3,6 +3,7 @@ layout: post
 title: "Dark theme is now live!"
 date: 2021-06-05 22:35:00 +0100
 tags: tech coding meta
+hidden: true
 ---
 
 This site should now use `prefers-color-scheme` to correctly switch to dark mode. Apologies for blinding you
