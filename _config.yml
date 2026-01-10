@@ -29,8 +29,9 @@ url: "https://markhenrick.site" # the base hostname & protocol for your site, e.
 github_username: markhenrick
 
 # Build settings
-source: src
-destination: docs
+# Keeping these as comments in case I want to change the dir structure again
+#source: src
+#destination: docs
 show_excerpts: true
 excerpt_separator: <!--more-->
 rss: RSS feed
