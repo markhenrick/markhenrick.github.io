@@ -6,17 +6,18 @@ on:
     paths-ignore:
       - README.md
       - .gitignore
+      - TODO.md
 
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
-  id-token: write
+  id-token: write # Needed for pages deployment
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
