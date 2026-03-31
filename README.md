@@ -12,6 +12,6 @@ The theme is based on [Minima](https://github.com/jekyll/minima)
 
 # AI, or lack thereof
 
-**AI is not used to generated the content in any part**. This site only exists because I enjoy writing the posts
+**AI is not used to generate content in any part**. This site only exists because I enjoy writing the posts
 
-I do use Claude to help with boring HTML, CSS, and Ruby maintenance stuff. Frontend and Ruby are neither my forte, nor the purpose of this repo. All commits are of course hand-checked, line-by-line
+For site maintenance stuff, I do use LLMs (neither CSS nor Ruby are my forte), though mostly just as a rubber duck and Google replacement. When AI is used to generate or modify substantial amounts of code, this is noted in the commit (which has only been once so far). All commits are of course hand checked line-by-line
