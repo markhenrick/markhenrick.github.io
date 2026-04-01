@@ -13,9 +13,12 @@ Not worth using issues just for myself
   * Consider Hugo but probably not. **Maintain old links**
   * Rewrite the whole thing in XSLT for lols (I had that idea since before everyone started talking about its deprecation 😂)
 * Setup
+  * Staging builds
   * Use either Nix, Distrobox, or Docker, to remove dependency on system Ruby
     * Extra: Ruby deps in Nix
     * Extra: GH build using Nix (with caching)
+    * Broader project: Make this build ad infinitum. I'm not even bothered about updates, and most security concerns are eliminated by the SSG model
+    * As a stop-gap: cron Github action to test a rebuild every week, to give early warning of entropy breakage
   * Use Just or similar for task running
     * Precondition check that we're in a Nix env
   * Automated tests. Could be as simple as basic checks of the HTML output, up to full browser automation against the live deployment
